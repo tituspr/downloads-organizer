@@ -2,15 +2,9 @@ from organizer import move_file
 from logger import logger
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
-import requests
 import time
 import os
-
-from requests.exceptions import (
-    ConnectionError,
-    Timeout,
-    RequestException
-)
+from webhook import classify_file
 
 from utils import (
     is_temporary_file,
@@ -59,51 +53,10 @@ class DownloadHandler(FileSystemEventHandler):
 
         logger.info(f"Detected: {filename}")
 
-        try:
-            response = requests.post(
-                WEBHOOK_URL,
-                json=payload,
-                timeout=10
-            )
+        destination = classify_file(payload)
 
-            response.raise_for_status()
-
-            data = response.json()
-
-            destination = data.get("destination")
-
-            if not destination:
-                raise KeyError("destination")
-
-            logger.info(
-                f"Webhook response: {response.status_code} ({destination})"
-                        )
-
-            move_file(filepath, destination)
-
-        except ConnectionError:
-            logger.error("Could not connect to n8n. Is the workflow running?")
-
-        except Timeout:
-            logger.error("Request to n8n timed out.")
-
-        except KeyError:
-            logger.error("Webhook response missing 'destination'.")
-
-        except ValueError:
-            logger.error("Invalid JSON returned from webhook.")
-
-        except PermissionError:
-            logger.error("Permission denied while moving file.")
-
-        except FileNotFoundError:
-            logger.error("Source file no longer exists.")
-
-        except RequestException as e:
-            logger.error(f"HTTP request failed: {e}")
-
-        except Exception:
-            logger.exception("Unexpected error occurred.")
+        if destination:
+              move_file(filepath, destination)
 
     def on_created(self, event):
         if event.is_directory:
