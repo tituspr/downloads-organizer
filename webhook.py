@@ -1,7 +1,15 @@
 import requests
+import time
 
 from logger import logger
-from config import WEBHOOK_URL
+
+from config import (
+    WEBHOOK_URL,
+    WEBHOOK_TIMEOUT,
+    WEBHOOK_MAX_RETRIES,
+    WEBHOOK_INITIAL_DELAY,
+    WEBHOOK_BACKOFF_FACTOR
+)
 
 from requests.exceptions import (
     ConnectionError,
@@ -13,13 +21,8 @@ from requests.exceptions import (
 def classify_file(payload: dict) -> str:
 
     try:
-        response = requests.post(
-            WEBHOOK_URL,
-            json=payload,
-            timeout=10
-        )
 
-        response.raise_for_status()
+        response = call_webhook(payload)
 
         data = response.json()
 
@@ -59,3 +62,45 @@ def classify_file(payload: dict) -> str:
         logger.exception("Unexpected error occurred.")
 
     return None
+
+def call_webhook(payload: dict) -> requests.Response:
+
+    delay = WEBHOOK_INITIAL_DELAY
+
+    for attempt in range(1, WEBHOOK_MAX_RETRIES + 1):
+
+        try:
+
+            logger.info(
+                f"Sending webhook (Attempt {attempt}/{WEBHOOK_MAX_RETRIES})"
+            )
+
+            response = requests.post(
+                WEBHOOK_URL,
+                json=payload,
+                timeout=WEBHOOK_TIMEOUT
+            )
+
+            response.raise_for_status()
+
+            if attempt > 1:
+                logger.info(
+                    f"Webhook succeeded on attempt {attempt}/{WEBHOOK_MAX_RETRIES}."
+                )
+
+            return response
+
+        except (ConnectionError, Timeout, RequestException):
+
+            logger.warning(
+                f"Attempt {attempt}/{WEBHOOK_MAX_RETRIES} failed."
+            )
+
+            if attempt == WEBHOOK_MAX_RETRIES:
+                raise
+
+            logger.info(f"Retrying in {delay} second(s)...")
+
+            time.sleep(delay)
+
+            delay *= WEBHOOK_BACKOFF_FACTOR

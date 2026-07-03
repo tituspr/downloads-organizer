@@ -13,13 +13,8 @@ from utils import (
 )
 
 from config import (
-    WEBHOOK_URL,
     DOWNLOADS_FOLDER,
-    TEMP_FILE_EXTENSIONS,
-    TEMP_FILE_PREFIXES
 )
-
-from utils import is_recently_processed
 
 class DownloadHandler(FileSystemEventHandler):
 
