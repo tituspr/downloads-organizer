@@ -5,6 +5,7 @@ from watchdog.events import FileSystemEventHandler
 import time
 import os
 from webhook import classify_file
+from enum import Enum, auto
 
 from utils import (
     is_temporary_file,
@@ -16,11 +17,25 @@ from config import (
     DOWNLOADS_FOLDER,
 )
 
+class WatcherState(Enum):
+    RUNNING = auto()
+    PAUSED = auto()
+    STOPPING = auto()
+
 class DownloadHandler(FileSystemEventHandler):
+
+    
+    def __init__(self, watcher):
+        super().__init__()
+        self.watcher = watcher
 
     def process_file(self, filepath):
 
         filename = os.path.basename(filepath)
+
+        if self.watcher.is_paused:
+            logger.info(f"Ignored while paused: {filename}")
+            return
 
         # Ignore temporary files
         if is_temporary_file(filename, filepath):
@@ -66,21 +81,82 @@ class DownloadHandler(FileSystemEventHandler):
         logger.info(f"Moved event: {os.path.basename(event.dest_path)}")
         self.process_file(event.dest_path)
 
-observer = Observer()
-observer.schedule(
-    DownloadHandler(),
-    DOWNLOADS_FOLDER,
-    recursive=False
-)
+class DownloadWatcher:
 
-observer.start()
+    def __init__(self):
+        self.observer = Observer()
+        self.state = WatcherState.RUNNING
 
-logger.info(f"Watching: {DOWNLOADS_FOLDER}")
+    @property
+    def is_running(self):
+        return self.state == WatcherState.RUNNING
 
-try:
-    while True:
-        time.sleep(1)
-except KeyboardInterrupt:
-    observer.stop()
 
-observer.join()
+    @property
+    def is_paused(self):
+        return self.state == WatcherState.PAUSED
+
+
+    @property
+    def pause_menu_text(self):
+        if self.is_paused:
+            return "▶ Resume Watching"
+        return "⏸ Pause Watching"
+
+
+    def start(self):
+
+        self.state = WatcherState.RUNNING
+
+        self.observer.schedule(
+            DownloadHandler(self),
+            DOWNLOADS_FOLDER,
+            recursive=False
+        )
+
+        self.observer.start()
+
+        logger.info(f"Watching: {DOWNLOADS_FOLDER}")
+
+        try:
+            while self.observer.is_alive():
+                time.sleep(1)
+        finally:
+            self.observer.join()
+
+
+    def stop(self):
+
+        if self.state == WatcherState.STOPPING:
+            return
+
+        self.state = WatcherState.STOPPING
+
+        logger.info("Stopping watcher...")
+
+        self.observer.stop()
+
+
+    def pause(self):
+
+        if self.state == WatcherState.RUNNING:
+            self.state = WatcherState.PAUSED
+            logger.info("Watcher paused")
+
+
+    def resume(self):
+
+        if self.state == WatcherState.PAUSED:
+            self.state = WatcherState.RUNNING
+            logger.info("Watcher resumed")
+
+
+    def toggle_pause(self):
+        if self.is_paused:
+            self.resume()
+        else:
+            self.pause()
+
+
+    def join(self):
+        self.observer.join()
