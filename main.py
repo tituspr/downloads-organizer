@@ -4,7 +4,8 @@ from pathlib import Path
 import pystray
 from PIL import Image
 from watcher import DownloadWatcher
-import time
+import startup
+import settings
 
 watcher = DownloadWatcher()
 
@@ -38,28 +39,62 @@ def on_toggle_pause(icon, item):
     icon.update_menu()
 
 
+def on_toggle_startup(icon, item):
+
+    if startup.is_startup_enabled():
+        startup.disable_startup()
+    else:
+        startup.enable_startup()
+
+    icon.update_menu()
+
+
 def main():
 
+
     watcher_thread.start()
+
+    def open_settings(icon, item):
+        settings.show()
+
 
     icon = pystray.Icon(
         "Downloads Organizer v1.3",
         create_icon(),
         "Downloads Organizer v1.3",
-        menu=pystray.Menu(
-            pystray.MenuItem(
-                lambda item: watcher.pause_menu_text,
-                on_toggle_pause,
-            ),
-            pystray.Menu.SEPARATOR,
-            pystray.MenuItem("Open Logs", open_logs),
-            pystray.Menu.SEPARATOR,
-            pystray.MenuItem("Exit", on_exit),
+    menu=pystray.Menu(
+
+        pystray.MenuItem(
+            lambda item: watcher.pause_menu_text,
+            on_toggle_pause,
         ),
+
+        pystray.Menu.SEPARATOR,
+
+        pystray.MenuItem(
+            "Start with Windows",
+            on_toggle_startup,
+            checked=lambda item: startup.is_startup_enabled(),
+        ),
+
+        pystray.Menu.SEPARATOR,
+
+        pystray.MenuItem(
+            "Settings...",
+            open_settings,
+        ),
+
+        pystray.Menu.SEPARATOR,
+
+        pystray.MenuItem("Open Logs", open_logs),
+
+        pystray.Menu.SEPARATOR,
+
+        pystray.MenuItem("Exit", on_exit),
+    ),
     )
 
     icon.run()
-
 
 if __name__ == "__main__":
     main()
