@@ -2,15 +2,18 @@ import tkinter as tk
 from tkinter import ttk
 import startup
 import threading
+from config import get_config, set_config
 
 window_lock = threading.Lock()
 
-
 settings_window = None
+
 
 def open_window():
 
     global settings_window
+
+    close_window()
 
     with window_lock:
 
@@ -21,25 +24,14 @@ def open_window():
 
         settings_window = tk.Tk()
 
-
     settings_window.title("Downloads Organizer Settings")
-    settings_window.geometry("400x260")
+    settings_window.geometry("420x260")
     settings_window.resizable(False, False)
 
     settings_window.protocol(
         "WM_DELETE_WINDOW",
         close_window
-        )
-
-
-    def save_settings():
-
-        if startup_var.get():
-            startup.enable_startup()
-        else:
-            startup.disable_startup()
-
-        close_window()
+    )
 
     # ---------- Padding ----------
     frame = ttk.Frame(settings_window, padding=20)
@@ -61,7 +53,7 @@ def open_window():
     # ---------- Notifications ----------
     notifications_var = tk.BooleanVar(
         master=settings_window,
-        value=False,
+        value=get_config("notifications"),
     )
 
     ttk.Checkbutton(
@@ -70,15 +62,60 @@ def open_window():
         variable=notifications_var,
         ).pack(anchor="w", pady=(0, 15))
 
-    # ---------- Delay ----------
+    # ---------- Startup Delay ----------
     ttk.Label(
         frame,
-        text="Organize Delay (seconds)"
+        text="Startup Delay (seconds)"
+        ).pack(anchor="w")
+
+    startup_delay_entry  = ttk.Entry(frame, width=8)
+    startup_delay_entry .insert(
+        0,
+        str(get_config("startup_delay"))
+    )
+    startup_delay_entry .pack(anchor="w", pady=(5, 20))
+
+    # ---------- Organize Delay ----------
+    ttk.Label(
+    frame,
+    text="Organize Delay (seconds)"
     ).pack(anchor="w")
 
-    delay = ttk.Entry(frame, width=8)
-    delay.insert(0, "2")
-    delay.pack(anchor="w", pady=(5, 20))
+    organize_delay_entry = ttk.Entry(
+        frame,
+        width=8
+    )
+
+    organize_delay_entry.insert(
+        0,
+        str(get_config("organize_delay"))
+    )
+
+    organize_delay_entry.pack(anchor="w", pady=(5, 20))
+
+
+    def save_settings():
+
+        try:
+            startup_delay = int(startup_delay_entry.get())
+            organize_delay = int(organize_delay_entry.get())
+        except ValueError:
+            return
+
+        set_config(
+            "notifications",
+            notifications_var.get()
+        )
+
+        if startup_var.get():
+            startup.enable_startup()
+        else:
+            startup.disable_startup()
+
+        set_config("startup_delay", startup_delay)
+        set_config("organize_delay", organize_delay)
+
+        close_window()
 
     # ---------- Buttons ----------
     button_frame = ttk.Frame(frame)
@@ -95,7 +132,6 @@ def open_window():
         text="Cancel",
         command=close_window,
     ).pack(side="right")
-
 
     settings_window.mainloop()
 

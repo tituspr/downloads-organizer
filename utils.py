@@ -1,19 +1,25 @@
 import time
+
 from config import (
-    WEBHOOK_URL,
-    DOWNLOADS_FOLDER,
     TEMP_FILE_EXTENSIONS,
     TEMP_FILE_PREFIXES,
     DUPLICATE_EVENT_WINDOW
 )
 
+from config import (
+    FILE_READY_TIMEOUT,
+    FILE_READY_RETRY_DELAY,
+)
+
 processed_files = {}
 
+
 def is_temporary_file(filename, filepath):
-        return (
-            filename.startswith(TEMP_FILE_PREFIXES)
-            or filepath.endswith(TEMP_FILE_EXTENSIONS)
-        )
+    return (
+        filename.startswith(TEMP_FILE_PREFIXES)
+        or filepath.endswith(TEMP_FILE_EXTENSIONS)
+    )
+
 
 def is_recently_processed(filepath: str) -> bool:
     current_time = time.time()
@@ -36,7 +42,8 @@ def is_recently_processed(filepath: str) -> bool:
     processed_files[filepath] = current_time
     return False
 
-def wait_for_file_ready(filepath: str, timeout: int = 30) -> bool:
+
+def wait_for_file_ready(filepath: str, timeout: int = FILE_READY_TIMEOUT) -> bool:
     """
     Wait until a file becomes readable before processing.
     Returns True if ready, otherwise False.
@@ -49,7 +56,7 @@ def wait_for_file_ready(filepath: str, timeout: int = 30) -> bool:
             with open(filepath, "rb"):
                 return True
         except PermissionError:
-            time.sleep(1)
+            time.sleep(FILE_READY_RETRY_DELAY)
         except FileNotFoundError:
             return False
 

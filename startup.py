@@ -1,12 +1,14 @@
-from pathlib import Path
-import os
 import os
 import sys
 from pathlib import Path
-
 from win32com.client import Dispatch
 
 APP_NAME = "Downloads Organizer"
+
+SHORTCUT_DESCRIPTION = (
+    "Automatically starts Downloads Organizer when you sign in."
+)
+
 
 def get_startup_folder():
     return Path(
@@ -46,9 +48,6 @@ def get_target():
     )
 
 
-APP_NAME = "Downloads Organizer"
-
-
 def enable_startup():
     shortcut = Dispatch("WScript.Shell").CreateShortCut(
         str(get_shortcut_path())
@@ -60,7 +59,7 @@ def enable_startup():
     shortcut.Arguments = arguments
     shortcut.WorkingDirectory = str(working_dir)
     shortcut.IconLocation = target
-    shortcut.Description = "Automatically starts Downloads Organizer when you sign in."
+    shortcut.Description = SHORTCUT_DESCRIPTION
 
     shortcut.save()
 

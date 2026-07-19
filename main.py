@@ -6,6 +6,19 @@ from PIL import Image
 from watcher import DownloadWatcher
 import startup
 import settings
+from config import load_config, get_config
+import time
+from notifications import NotificationManager
+
+APP_NAME = "Downloads Organizer"
+APP_VERSION = "v1.5"
+
+TITLE = f"{APP_NAME} {APP_VERSION}"
+
+load_config()
+
+notifications = NotificationManager()
+
 
 watcher = DownloadWatcher()
 
@@ -16,7 +29,6 @@ watcher_thread = threading.Thread(
 
 
 def create_icon():
-
     icon_path = Path(__file__).parent / "assets" / "icon.ico"
     return Image.open(icon_path)
 
@@ -24,6 +36,10 @@ def create_icon():
 def open_logs(icon, item):
     log_path = Path(__file__).parent / "logs" / "organizer.log"
     os.startfile(log_path)
+
+
+def open_settings(icon, item):
+    settings.show()
 
 
 def on_exit(icon, item):
@@ -36,6 +52,16 @@ def on_toggle_pause(icon, item):
 
     watcher.toggle_pause()
 
+    if watcher.is_paused:
+        notifications.notify(
+            APP_NAME,
+            "Monitoring paused."
+        )
+    else:
+        notifications.notify(
+            APP_NAME,
+            "Monitoring resumed."
+        )
     icon.update_menu()
 
 
@@ -46,22 +72,22 @@ def on_toggle_startup(icon, item):
     else:
         startup.enable_startup()
 
-    icon.update_menu()
-
 
 def main():
 
+    time.sleep(get_config("startup_delay"))
 
     watcher_thread.start()
 
-    def open_settings(icon, item):
-        settings.show()
-
+    notifications.notify(
+    "Downloads Organizer",
+    "Organizer started successfully."
+    )
 
     icon = pystray.Icon(
-        "Downloads Organizer v1.3",
+        TITLE,
         create_icon(),
-        "Downloads Organizer v1.3",
+        TITLE,
     menu=pystray.Menu(
 
         pystray.MenuItem(
