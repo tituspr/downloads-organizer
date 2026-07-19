@@ -11,8 +11,16 @@ Automatically organizes downloaded files using Python, Watchdog and n8n.
 - Edge \& Chrome download support
 - Waits until files are completely downloaded
 - Detailed logging
-- Configurable settings
 - Windows System Tray application
+- Configurable settings
+- Notifications
+
+## Configurable settings
+- Startup delay
+- Organizer delay
+- Start with windows
+- Pause/ Resume watcher
+- Enable/ desable notifications
 
 ## Technologies
 
