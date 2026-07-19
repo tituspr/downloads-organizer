@@ -1,5 +1,6 @@
 import requests
 import time
+from typing import Optional
 
 from logger import logger
 
@@ -18,7 +19,7 @@ from requests.exceptions import (
 )
 
 
-def classify_file(payload: dict) -> str:
+def classify_file(payload: dict) -> Optional[str]:
 
     try:
 
@@ -63,6 +64,7 @@ def classify_file(payload: dict) -> str:
 
     return None
 
+
 def call_webhook(payload: dict) -> requests.Response:
 
     delay = WEBHOOK_INITIAL_DELAY
@@ -90,10 +92,10 @@ def call_webhook(payload: dict) -> requests.Response:
 
             return response
 
-        except (ConnectionError, Timeout, RequestException):
+        except (ConnectionError, Timeout, RequestException) as e:
 
             logger.warning(
-                f"Attempt {attempt}/{WEBHOOK_MAX_RETRIES} failed."
+                f"Attempt {attempt}/{WEBHOOK_MAX_RETRIES} failed: {e}"
             )
 
             if attempt == WEBHOOK_MAX_RETRIES:

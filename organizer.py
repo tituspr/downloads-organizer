@@ -1,8 +1,12 @@
-from logger import logger
 import os
 import shutil
 
+from logger import logger
+from notifications import NotificationManager
+
 DOWNLOADS_FOLDER = os.path.join(os.path.expanduser("~"), "Downloads")
+
+notifications = NotificationManager()
 
 
 def get_unique_filepath(destination_folder, filename):
@@ -50,3 +54,8 @@ def move_file(filepath, destination):
     shutil.move(filepath, new_path)
 
     logger.info(f"Moved to: {new_path}")
+
+    notifications.notify(
+        "File Organized",
+        f"{filename} → {destination}"
+    )

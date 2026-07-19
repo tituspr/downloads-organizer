@@ -1,30 +1,33 @@
-from organizer import move_file
-from logger import logger
-from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler
-import time
 import os
-from webhook import classify_file
+import time
 from enum import Enum, auto
 
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
+
+from logger import logger
+from organizer import move_file
 from utils import (
     is_temporary_file,
     is_recently_processed,
     wait_for_file_ready
 )
+from webhook import classify_file
 
 from config import (
     DOWNLOADS_FOLDER,
+    get_config,
 )
+
 
 class WatcherState(Enum):
     RUNNING = auto()
     PAUSED = auto()
     STOPPING = auto()
 
+
 class DownloadHandler(FileSystemEventHandler):
 
-    
     def __init__(self, watcher):
         super().__init__()
         self.watcher = watcher
@@ -52,7 +55,14 @@ class DownloadHandler(FileSystemEventHandler):
             logger.warning(f"File not ready: {filename}")
             return
 
-        filename = os.path.basename(filepath)
+        delay = get_config("organize_delay")
+
+        if delay > 0:
+            logger.info(
+                f"Waiting {delay} seconds before organizing '{filename}'"
+            )
+            time.sleep(delay)
+
         extension = os.path.splitext(filename)[1].lower()
 
         payload = {
@@ -66,7 +76,7 @@ class DownloadHandler(FileSystemEventHandler):
         destination = classify_file(payload)
 
         if destination:
-              move_file(filepath, destination)
+            move_file(filepath, destination)
 
     def on_created(self, event):
         if event.is_directory:
@@ -81,6 +91,7 @@ class DownloadHandler(FileSystemEventHandler):
         logger.info(f"Moved event: {os.path.basename(event.dest_path)}")
         self.process_file(event.dest_path)
 
+
 class DownloadWatcher:
 
     def __init__(self):
@@ -91,18 +102,17 @@ class DownloadWatcher:
     def is_running(self):
         return self.state == WatcherState.RUNNING
 
-
     @property
     def is_paused(self):
         return self.state == WatcherState.PAUSED
 
-
     @property
     def pause_menu_text(self):
-        if self.is_paused:
-            return "▶ Resume Watching"
-        return "⏸ Pause Watching"
-
+        return (
+            "▶ Resume Watching"
+            if self.is_paused
+            else "⏸ Pause Watching"
+        )
 
     def start(self):
 
